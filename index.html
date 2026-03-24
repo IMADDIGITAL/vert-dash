@@ -511,15 +511,13 @@ async function loadCreatives() {
   document.getElementById('creativeContent').style.display='none';
   try {
     const [adsRes,insRes] = await Promise.all([
-      gapi(`${ACCOUNT}/ads`,{fields:'id,name,creative{thumbnail_url,object_type}',limit:100}),
-      gapi(`${ACCOUNT}/insights`,{fields:'ad_id,ad_name,spend,reach,impressions,clicks,ctr,actions',time_range:tr,level:'ad',limit:200})
+      gapi(`${ACCOUNT}/ads`,{fields:'id,name,creative{thumbnail_url,object_type}',limit:200}),
+      // inclui adset_name e campaign_name para filtrar igual à aba Meta Ads
+      gapi(`${ACCOUNT}/insights`,{fields:'ad_id,ad_name,adset_name,campaign_name,spend,reach,impressions,clicks,ctr,actions',time_range:tr,level:'ad',limit:200})
     ]);
     const thumbMap={};
     (adsRes.data||[]).forEach(a=>{
-      thumbMap[a.id]={
-        thumb: a.creative?.thumbnail_url||null,
-        type: a.creative?.object_type||'IMAGE'
-      };
+      thumbMap[a.id]={thumb:a.creative?.thumbnail_url||null,type:a.creative?.object_type||'IMAGE'};
     });
     allAds=(insRes.data||[]).map(row=>({...row,...(thumbMap[row.ad_id]||{})}));
     allAds.sort((a,b)=>parseFloat(b.spend||0)-parseFloat(a.spend||0));
@@ -534,7 +532,8 @@ async function loadCreatives() {
 
 function renderCreatives() {
   const kw=document.getElementById('cKeywordSel').value.toUpperCase();
-  let rows=kw?allAds.filter(a=>(a.ad_name||'').toUpperCase().includes(kw)):[...allAds];
+  // filtra pelo nome do CONJUNTO DE ANÚNCIOS (mesmo critério da aba Meta Ads)
+  let rows=kw?allAds.filter(a=>(a.adset_name||'').toUpperCase().includes(kw)):[...allAds];
   rows.sort((a,b)=>parseFloat(b.spend||0)-parseFloat(a.spend||0));
 
   document.getElementById('creativeCardTitle').textContent=`Criativos${kw?' — '+kw.charAt(0)+kw.slice(1).toLowerCase():''} (${rows.length})`;
